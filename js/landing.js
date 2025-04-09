@@ -1,5 +1,5 @@
 window.addEventListener("DOMContentLoaded", (event) => {
-   console.log("DOM fully loaded and parsed");
+   console.log("Willkommen bei TEUT. Wir freuen uns, dass Sie hier sind!");
 
    // Get the zoom levels from the map element's attributes (without 'data-' prefix)
    const mapElement = document.querySelector("#map");
