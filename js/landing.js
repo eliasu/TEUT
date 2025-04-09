@@ -1,4 +1,6 @@
 window.addEventListener("DOMContentLoaded", (event) => {
+   console.log("DOM fully loaded and parsed");
+
    // Get the zoom levels from the map element's attributes (without 'data-' prefix)
    const mapElement = document.querySelector("#map");
    const initialZoom = parseInt(mapElement.getAttribute("initialzoom"), 10) || 6; // Default to 6 if not set
