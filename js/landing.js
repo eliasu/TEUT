@@ -100,10 +100,15 @@ window.addEventListener("DOMContentLoaded", (event) => {
    // Adjust map view to fit all markers initially and avoid fade effect
    if (!bounds.isEmpty()) {
       // Set the initial position and zoom without the fade
-      map.jumpTo({
-         center: bounds.getCenter(),
-         padding: { bottom: 220 },
-         zoom: initialZoom // Use the initial zoom level from the #map element
-      });
+      // map.jumpTo({
+      //    center: bounds.getCenter(),
+      //    padding: { bottom: 220 },
+      //    zoom: initialZoom // Use the initial zoom level from the #map element
+      // });
+      
+      console.log("show init", bounds.getCenter(), initialZoom);
+      map.fitBounds(bounds, {
+         padding: {top: 20, bottom:20, left: 20, right: 20}
+     });
    }
 });
