@@ -1,13 +1,34 @@
 window.addEventListener("DOMContentLoaded", (event) => {
+   // Constants for better maintainability
+   const CONFIG = {
+      DEFAULT_ZOOM: 6,
+      DEFAULT_CENTER: [-87.661557, 41.893748],
+      DEFAULT_ZOOM_LEVEL: 10.7,
+      FLYTO_PADDING: { bottom: 220 },
+      BOUNDS_PADDING: { top: 75, bottom: 75, left: 75, right: 75 },
+      POPUP_OFFSET: 32,
+      POPUP_MAX_WIDTH: '18rem'
+   };
 
    // Get the zoom levels from the map element's attributes (without 'data-' prefix)
    const mapElement = document.querySelector("#map");
-   const initialZoom = parseInt(mapElement.getAttribute("initialzoom"), 10) || 6; // Default to 6 if not set
-   const styleUrl = mapElement.getAttribute("map_style_url");
+   
+   if (!mapElement) {
+      console.error("Map container '#map' not found");
+      return;
+   }
+
+   const initialZoom = parseInt(mapElement.getAttribute("initialzoom"), 10) || CONFIG.DEFAULT_ZOOM;
+   const styleUrl = mapElement.getAttribute("mapstyle");
+
+   if (!styleUrl) {
+      console.error("Map style URL not provided");
+      return;
+   }
 
    const bounds = new mapboxgl.LngLatBounds();
    const markers = new Map(); // Store markers for easy reference
-
+   const filterBounds = new Map(); // Store bounds for each filter
 
    // The value for 'accessToken' begins with 'pk...'
    mapboxgl.accessToken = 'pk.eyJ1IjoiZWlsZWUiLCJhIjoiY203MXcwYzE3MDJzbjJrc2U2NXJvdnhpdSJ9.JD2SHZ83QNAMt_KZeO7ZXA';
@@ -15,26 +36,51 @@ window.addEventListener("DOMContentLoaded", (event) => {
    const map = new mapboxgl.Map({
       container: 'map',
       style: styleUrl,
-      center: [-87.661557, 41.893748],
-      zoom: 10.7
+      center: CONFIG.DEFAULT_CENTER,
+      zoom: CONFIG.DEFAULT_ZOOM_LEVEL
    });
 
    map.addControl(new mapboxgl.FullscreenControl());
 
-   // ad markers and popups
-   document.querySelectorAll(".map_item").forEach(item => {
+   // Cache DOM elements for better performance
+   const mapItems = document.querySelectorAll(".map_item");
+   const classname = mapElement.getAttribute("classname") || 'test-class';
+
+   // Helper function to remove existing popups
+   const removeExistingPopups = () => {
+      const popups = document.getElementsByClassName("mapboxgl-popup");
+      Array.from(popups).forEach(popup => popup.remove());
+   };
+
+   // Helper function to validate coordinates
+   const isValidCoordinates = (lng, lat) => {
+      return !isNaN(lng) && !isNaN(lat) && 
+             lng >= -180 && lng <= 180 && 
+             lat >= -90 && lat <= 90;
+   };
+
+   // Add markers and popups
+   mapItems.forEach(item => {
       const lng = parseFloat(item.getAttribute("lng"));
       const lat = parseFloat(item.getAttribute("lat"));
-      const classname = mapElement.getAttribute("classname") || 'test-class';
+      const filter = item.getAttribute("data-filter");
       
       const map_modal = item.querySelector(".map_modal");
       const modalContent = map_modal?.innerHTML || "<p>No content available</p>";
 
-      if (!isNaN(lng) && !isNaN(lat)) {
+      if (!isValidCoordinates(lng, lat)) {
+         console.warn("Invalid coordinates for:", item, `lng: ${lng}, lat: ${lat}`);
+         return;
+      }
+
+      try {
          // Create a popup and insert the copied content
-         const popup = new mapboxgl.Popup({ offset: 32, maxWidth: '18rem' })
-            .setHTML(modalContent) // Copy inner content into the popup
-            .addClassName(classname); // Dynamic class
+         const popup = new mapboxgl.Popup({ 
+            offset: CONFIG.POPUP_OFFSET, 
+            maxWidth: CONFIG.POPUP_MAX_WIDTH 
+         })
+            .setHTML(modalContent)
+            .addClassName(classname);
          
          // create a HTML element for each feature
          const el = document.createElement('div');
@@ -43,7 +89,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
          // Create a marker
          const marker = new mapboxgl.Marker(el)
             .setLngLat([lng, lat])
-            .setPopup(popup) // Attach the popup
+            .setPopup(popup)
             .addTo(map);
 
          // Store marker and popup for later reference
@@ -53,14 +99,22 @@ window.addEventListener("DOMContentLoaded", (event) => {
          popup.on('open', () => {
             map.flyTo({
                center: [lng, lat],
-               padding: { bottom: 220 },
+               padding: CONFIG.FLYTO_PADDING,
                essential: true
             });
          });
 
          bounds.extend([lng, lat]);
-      } else {
-         console.warn("Invalid coordinates for:", item);
+
+         // Add to filter bounds if filter exists
+         if (filter) {
+            if (!filterBounds.has(filter)) {
+               filterBounds.set(filter, new mapboxgl.LngLatBounds());
+            }
+            filterBounds.get(filter).extend([lng, lat]);
+         }
+      } catch (error) {
+         console.error("Error creating marker for item:", item, error);
       }
 
       // add popup interaction
@@ -73,16 +127,12 @@ window.addEventListener("DOMContentLoaded", (event) => {
             // Fly to the clicked pin and wait for the flyTo to finish
             map.flyTo({
                center: marker.getLngLat(),
-               padding: { bottom: 220 },
+               padding: CONFIG.FLYTO_PADDING,
                essential: true
             });
             
             // remove all already opened popups
-            const popups = document.getElementsByClassName("mapboxgl-popup");
-
-            if (popups.length) {
-               popups[0].remove();
-            }
+            removeExistingPopups();
 
             // Wait for the 'moveend' event after flyTo animation is finished
             map.once('moveend', () => {
@@ -93,15 +143,46 @@ window.addEventListener("DOMContentLoaded", (event) => {
       });
 
       // remove the item from DOM
-      map_modal.remove();
+      if (map_modal) {
+         map_modal.remove();
+      }
+   });
 
+   // Add filter click handlers
+   const filterElements = document.querySelectorAll('[data-filter-button]');
+   filterElements.forEach(filterElement => {
+      const filterValue = filterElement.getAttribute("data-filter-button");
+      
+      if (filterValue && filterBounds.has(filterValue)) {
+         filterElement.addEventListener("click", () => {
+            const bounds = filterBounds.get(filterValue);
+            
+            if (!bounds.isEmpty()) {
+               map.fitBounds(bounds, {
+                  padding: CONFIG.BOUNDS_PADDING
+               });
+            }
+         });
+      }
+   });
+
+   // Add clear/reset functionality
+   const clearElements = document.querySelectorAll('[filter="reset"]');
+   clearElements.forEach(clearElement => {
+      clearElement.addEventListener("click", () => {
+         // Reset to show all markers
+         if (!bounds.isEmpty()) {
+            map.fitBounds(bounds, {
+               padding: CONFIG.BOUNDS_PADDING
+            });
+         }
+      });
    });
 
    // Adjust map view to fit all markers initially and avoid fade effect
    if (!bounds.isEmpty()) {
-   
       map.fitBounds(bounds, {
-         padding: {top: 75, bottom:75, left: 75, right: 75}
-     });
+         padding: CONFIG.BOUNDS_PADDING
+      });
    }
 });
