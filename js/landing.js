@@ -193,33 +193,19 @@ function initMap() {
 }
 
 function setNavigationHighlighting() {
-   const currentPath = window.location.pathname;
-   // Only run on /
-   if (currentPath !== '/') return;
-
-   const mainLink = document.querySelector('a[href="/"]');
    const projekteLink = document.querySelector('a[href="/#projekte"]');
    const projekteContain = document.getElementById('projekte-contain');
 
-   if (!mainLink || !projekteLink || !projekteContain) return;
-
-   function setNavState(inProjekte) {
-      if (inProjekte) {
-         mainLink.classList.remove('w--current');
-         projekteLink.classList.add('w--current');
-      } else {
-         projekteLink.classList.remove('w--current');
-         mainLink.classList.add('w--current');
-      }
-   }
-
-   // Initial state: highlight main link
-   setNavState(false);
+   if (!projekteLink || !projekteContain) return;
 
    const observer = new IntersectionObserver(
       (entries) => {
          entries.forEach(entry => {
-            setNavState(entry.isIntersecting);
+            if (entry.isIntersecting) {
+               projekteLink.classList.add('w--current');
+            } else {
+               projekteLink.classList.remove('w--current');
+            }
          });
       },
       {
