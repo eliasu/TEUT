@@ -1,5 +1,10 @@
 window.addEventListener("DOMContentLoaded", (event) => {
-   // Constants for better maintainability
+   initMap();
+   setNavigationHighlighting();
+});
+
+function initMap() {
+// Constants for better maintainability
    const CONFIG = {
       DEFAULT_ZOOM: 6,
       DEFAULT_CENTER: [-87.661557, 41.893748],
@@ -185,4 +190,44 @@ window.addEventListener("DOMContentLoaded", (event) => {
          padding: CONFIG.BOUNDS_PADDING
       });
    }
-});
+}
+
+function setNavigationHighlighting() {
+   const currentPath = window.location.pathname;
+   // Only run on /
+   if (currentPath !== '/') return;
+
+   const mainLink = document.querySelector('a[href="/"]');
+   const projekteLink = document.querySelector('a[href="/#projekte"]');
+   const projekteContain = document.getElementById('projekte-contain');
+
+   if (!mainLink || !projekteLink || !projekteContain) return;
+
+   function setNavState(inProjekte) {
+      if (inProjekte) {
+         mainLink.classList.remove('w--current');
+         projekteLink.classList.add('w--current');
+      } else {
+         projekteLink.classList.remove('w--current');
+         mainLink.classList.add('w--current');
+      }
+   }
+
+   // Initial state: highlight main link
+   setNavState(false);
+
+   const observer = new IntersectionObserver(
+      (entries) => {
+         entries.forEach(entry => {
+            setNavState(entry.isIntersecting);
+         });
+      },
+      {
+         root: null,
+         rootMargin: '0px 0px 0% 0px', // Adjust as needed
+         threshold: 0.1
+      }
+   );
+
+   observer.observe(projekteContain);
+}

@@ -1,5 +1,15 @@
-// Team list sorting and shuffling
 window.addEventListener("DOMContentLoaded", () => {
+   // Team list sorting and shuffling
+   shuffleTeam();
+
+   // Set the active link in the navigation
+   setNavigationHighlighting();
+
+   // Set the active link in the navigation for the home page
+   setProjekteLinks();
+});
+
+function shuffleTeam() {
    const teamList = document.querySelector('#team_list');
    if (!teamList) return;
 
@@ -37,4 +47,45 @@ window.addEventListener("DOMContentLoaded", () => {
    teamList.innerHTML = '';
    sortedItems.forEach(obj => teamList.appendChild(obj.el));
    unsortedItems.forEach(item => teamList.appendChild(item));
-});
+}
+
+function setNavigationHighlighting(inTeam) {
+   const currentPath = window.location.pathname;
+   // Only run on /unternehmen
+   if (currentPath !== '/unternehmen') return;
+
+   const mainLink = document.querySelector('a[href="/unternehmen"]');
+   const teamLink = document.querySelector('a[href="/unternehmen#team"]');
+   const teamContain = document.getElementById('team-contain');
+
+   if (!mainLink || !teamLink || !teamContain) return;
+
+   function setNavState(inTeam) {
+      if (inTeam) {
+         mainLink.classList.remove('w--current');
+         teamLink.classList.add('w--current');
+      } else {
+         teamLink.classList.remove('w--current');
+         mainLink.classList.add('w--current');
+      }
+   }
+
+   // Initial state: highlight main link
+   setNavState(false);
+
+   const observer = new IntersectionObserver(
+      (entries) => {
+         entries.forEach(entry => {
+            setNavState(entry.isIntersecting);
+         });
+      },
+      {
+         root: null,
+         rootMargin: '0px 0px 0% 0px', // Adjust as needed
+         threshold: 0.1
+      }
+   );
+
+   observer.observe(teamContain);
+}
+
