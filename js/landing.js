@@ -7,7 +7,7 @@ function initMap() {
 // Constants for better maintainability
    const CONFIG = {
       DEFAULT_ZOOM: 6,
-      DEFAULT_CENTER: [-87.661557, 41.893748],
+      DEFAULT_CENTER: [52.517037 , 13.38886],
       DEFAULT_ZOOM_LEVEL: 10.7,
       FLYTO_PADDING: { bottom: 220 },
       BOUNDS_PADDING: { top: 75, bottom: 75, left: 75, right: 75 },
